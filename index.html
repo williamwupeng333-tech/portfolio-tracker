@@ -1,1 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfolio Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body { font-family: Arial; padding: 10px; }
+input, select, button { margin: 5px; padding: 5px; }
+table { width: 100%; margin-top: 10px; border-collapse: collapse; }
+td, th { border: 1px solid #ccc; padding: 5px; text-align: center; }
+</style>
+</head>
 
+<body>
+
+<h2>📊 Portfolio Tracker</h2>
+
+<div>
+  <input type="date" id="date">
+  <input type="text" id="ticker" placeholder="Ticker">
+  <select id="type">
+    <option value="BUY">BUY</option>
+    <option value="SELL">SELL</option>
+  </select>
+  <input type="number" id="shares" placeholder="Shares">
+  <input type="number" id="price" placeholder="Price">
+  <button onclick="addTrade()">Add</button>
+</div>
+
+<table id="tradeTable">
+  <thead>
+    <tr>
+      <th>Date</th><th>Ticker</th><th>Type</th><th>Shares</th><th>Price</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<h3>📈 Metrics</h3>
+<div id="metrics"></div>
+
+<canvas id="chart"></canvas>
+
+<script>
+let trades = JSON.parse(localStorage.getItem("trades") || "[]");
+
+function save() {
+  localStorage.setItem("trades", JSON.stringify(trades));
+}
+
+function addTrade() {
+  const t = {
+    date: document.getElementById("date").value,
+    ticker: document.getElementById("ticker").value.toUpperCase(),
+    type: document.getElementById("type").value,
+    shares: parseFloat(document.getElementById("shares").value),
+    price: parseFloat(document.getElementById("price").value)
+  };
+  trades.push(t);
+  save();
+  render();
+}
+
+function render() {
+  const tbody = document.querySelector("#tradeTable tbody");
+  tbody.innerHTML = "";
+  trades.forEach(t => {
+    tbody.innerHTML += `<tr>
+      <td>${t.date}</td>
+      <td>${t.ticker}</td>
+      <td>${t.type}</td>
+      <td>${t.shares}</td>
+      <td>${t.price}</td>
+    </tr>`;
+  });
+  updateMetrics();
+}
+
+function generateCashflows(trades) {
+  return trades.map(t => ({
+    date: new Date(t.date),
+    amount: t.type === "BUY"
+      ? -t.shares * t.price
+      : t.shares * t.price
+  }));
+}
+
+// 简单 XIRR
+function xirr(cfs) {
+  let rate = 0.1;
+  for (let i = 0; i < 100; i++) {
+    let npv = 0;
+    cfs.forEach(cf => {
+      let t = (cf.date - cfs[0].date) / (365*24*3600*1000);
+      npv += cf.amount / Math.pow(1 + rate, t);
+    });
+    rate -= npv / 10000;
+  }
+  return rate;
+}
+
+// 拉 SPY 当前价格
+async function getPrice(ticker) {
+  try {
+    const res = await fetch(
+      `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}`
+    );
+    const data = await res.json();
+    return data.chart.result[0].meta.regularMarketPrice;
+  } catch {
+    return null;
+  }
+}
+
+async function updateMetrics() {
+  if (trades.length === 0) return;
+
+  const cfs = generateCashflows(trades);
+
+  // 假设当前全部卖出（估值）
+  let totalShares = {};
+  trades.forEach(t => {
+    totalShares[t.ticker] = (totalShares[t.ticker] || 0) +
+      (t.type === "BUY" ? t.shares : -t.shares);
+  });
+
+  let totalValue = 0;
+
+  for (let ticker in totalShares) {
+    const price = await getPrice(ticker);
+    if (price) totalValue += price * totalShares[ticker];
+  }
+
+  cfs.push({ date: new Date(), amount: totalValue });
+
+  const irr = xirr(cfs);
+
+  // SPY 对比
+  let spyCF = cfs.map(cf => ({...cf}));
+  const spyPrice = await getPrice("SPY");
+  if (spyPrice) {
+    spyCF[spyCF.length - 1].amount = spyPrice * 1; // 简化
+  }
+
+  const spyIRR = xirr(spyCF);
+
+  document.getElementById("metrics").innerHTML = `
+    IRR: ${(irr*100).toFixed(2)}% <br>
+    SPY IRR: ${(spyIRR*100).toFixed(2)}%
+  `;
+
+  drawChart(cfs);
+}
+
+let chart;
+
+function drawChart(cfs) {
+  const labels = cfs.map(c => c.date.toISOString().slice(0,10));
+  const data = cfs.map(c => c.amount);
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("chart"), {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{ label: "Cashflow", data: data }]
+    }
+  });
+}
+
+render();
+</script>
+
+</body>
+</html>
