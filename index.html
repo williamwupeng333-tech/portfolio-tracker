@@ -2,66 +2,101 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Portfolio Tracker Pro</title>
+    <title>Portfolio Tracker Live</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 p-4 md:p-10 text-slate-800">
     <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-2xl border border-slate-100">
-        <h1 class="text-2xl font-black mb-6 tracking-tight text-slate-900 border-b pb-4">📊 投资看板 <span class="text-blue-500">Live</span></h1>
+        <h1 class="text-2xl font-black mb-6 tracking-tight text-slate-900 border-b pb-4 flex items-center">
+            <span class="mr-2">📊</span> 投资看板 <span class="ml-2 text-blue-500 text-sm font-bold bg-blue-50 px-2 py-1 rounded">V2.0 LIVE</span>
+        </h1>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div class="p-6 bg-slate-900 rounded-2xl text-white shadow-lg">
-                <p class="text-xs font-bold opacity-50 uppercase mb-1">当前持仓实时市值</p>
-                <h2 id="total-val" class="text-3xl font-mono font-bold tracking-tighter">￥0.00</h2>
-                <div class="mt-4 pt-4 border-t border-slate-700">
-                    <p class="text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest">Google Sheets 实时报价单</p>
+                <p class="text-xs font-bold opacity-50 uppercase mb-1 tracking-widest">当前持仓实时总市值</p>
+                <h2 id="total-val" class="text-4xl font-mono font-bold tracking-tighter mb-4">￥0.00</h2>
+                
+                <div class="pt-4 border-t border-slate-700">
+                    <p class="text-[10px] font-bold text-slate-500 mb-3 uppercase tracking-widest flex items-center">
+                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
+                        Google Sheets 实时报价看板
+                    </p>
                     <div id="price-tags" class="flex flex-wrap gap-2"></div>
                 </div>
             </div>
-            <div class="p-6 bg-blue-600 rounded-2xl text-white shadow-lg">
-                <p class="text-xs font-bold opacity-70 uppercase mb-1">年化 IRR (17% 目标)</p>
-                <h2 id="irr-val" class="text-3xl font-mono font-bold tracking-tighter">--%</h2>
-                <p id="irr-msg" class="text-[10px] mt-2 font-medium opacity-80"></p>
+
+            <div class="p-6 bg-blue-600 rounded-2xl text-white shadow-lg relative overflow-hidden">
+                <p class="text-xs font-bold opacity-70 uppercase mb-1 tracking-widest">年化 IRR (基于实时价)</p>
+                <h2 id="irr-val" class="text-4xl font-mono font-bold tracking-tighter relative z-10">--%</h2>
+                <p id="irr-msg" class="text-[10px] mt-2 font-medium opacity-80 relative z-10"></p>
+                <div class="absolute right-[-20px] bottom-[-20px] text-white opacity-10 text-8-xl font-black italic select-none">17%</div>
             </div>
         </div>
 
-        <div class="bg-slate-50 p-4 rounded-xl mb-8 border border-slate-200">
-            <div class="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase">日期</label><input type="date" id="d" class="w-full border p-2 rounded-lg text-sm"></div>
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase">代码</label><input type="text" id="tk" placeholder="TCOM" class="w-full border p-2 rounded-lg text-sm uppercase font-bold"></div>
-                <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase">类型</label>
-                    <select id="type" class="w-full border p-2 rounded-lg text-sm font-bold bg-white">
+        <div class="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200 shadow-inner">
+            <div class="grid grid-cols-2 md:grid-cols-6 gap-4 items-end">
+                <div class="col-span-2 md:col-span-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">日期</label>
+                    <input type="date" id="d" class="w-full border-slate-200 border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">代码</label>
+                    <input type="text" id="tk" placeholder="TCOM" class="w-full border-slate-200 border p-2 rounded-lg text-sm uppercase font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="col-span-2 md:col-span-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">交易类型</label>
+                    <select id="type" class="w-full border-slate-200 border p-2 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-blue-500 outline-none">
                         <option value="BUY">买入 (+)</option>
                         <option value="SELL" class="text-red-500">卖出 (-)</option>
                     </select>
                 </div>
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase">股数</label><input type="number" id="sh" placeholder="100" class="w-full border p-2 rounded-lg text-sm"></div>
-                <div><label class="text-[10px] font-bold text-slate-400 uppercase">单价</label><input type="number" id="pr" placeholder="50.0" class="w-full border p-2 rounded-lg text-sm"></div>
-                <button onclick="add()" class="bg-slate-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-600 transition h-[38px] w-full">记录</button>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">股数</label>
+                    <input type="number" id="sh" placeholder="100" class="w-full border-slate-200 border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">单价</label>
+                    <input type="number" id="pr" placeholder="50.0" class="w-full border-slate-200 border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <button onclick="add()" class="bg-slate-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-600 transition shadow-lg h-[40px] w-full col-span-2 md:col-span-1">
+                    添加记录
+                </button>
             </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="overflow-hidden rounded-xl border border-slate-100 shadow-sm">
             <table class="w-full text-left text-xs">
-                <thead class="border-b text-slate-400 uppercase font-bold"><tr class="p-2"><th>日期</th><th>代码</th><th>类型</th><th>数量</th><th>单价</th><th>金额</th><th>操作</th></tr></thead>
-                <tbody id="list" class="divide-y text-slate-600"></tbody>
+                <thead class="bg-slate-50 text-slate-400 uppercase font-bold border-b">
+                    <tr>
+                        <th class="p-4">日期</th>
+                        <th>代码</th>
+                        <th>动作</th>
+                        <th>数量</th>
+                        <th>价格</th>
+                        <th>总额</th>
+                        <th class="text-right p-4">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="list" class="divide-y text-slate-600 bg-white">
+                    </tbody>
             </table>
         </div>
 
-        <div id="status" class="mt-10 p-3 bg-slate-100 rounded-lg text-[10px] font-mono text-slate-400">状态：等待同步...</div>
+        <div id="status" class="mt-8 p-3 bg-slate-50 rounded-lg text-[10px] font-mono text-slate-400 flex justify-between items-center">
+            <span>系统状态：等待数据同步...</span>
+            <span class="opacity-50">Data Source: Google Sheets CSV</span>
+        </div>
     </div>
 
 <script>
-// 使用独立存储Key
-let trades = JSON.parse(localStorage.getItem("tr_v100") || "[]");
+// 使用全新的 Key 确保存储结构不冲突
+let trades = JSON.parse(localStorage.getItem("portfolio_v2") || "[]");
 
-// ⚠️ 请确保这里填入你 image_9861bf.png 中使用的那个有效链接
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBHrRHu4C_g6B_aYFSpgPs7uAYGgE4IRlsTa6auBceGHDxEaFO_9yScwF0yoT4cX117cjXI2QeFOIU/pub?gid=0&single=true&output=csv";
 
 async function getPrices() {
     try {
-        const r = await fetch(CSV_URL + "&cache=" + Date.now());
+        const r = await fetch(CSV_URL + "&t=" + Date.now());
         const text = await r.text();
         const rows = text.split(/\r?\n/).slice(1);
         let p = {};
@@ -69,10 +104,10 @@ async function getPrices() {
             const c = row.split(",");
             if(c[0] && c[1]) p[c[0].replace(/"/g,'').trim().toUpperCase()] = parseFloat(c[1]);
         });
-        document.getElementById('status').innerText = "✅ 股价同步成功：" + Object.keys(p).join(", ");
+        document.getElementById('status').firstElementChild.innerText = "✅ 股价同步成功: " + Object.keys(p).join(", ");
         return p;
     } catch(e) {
-        document.getElementById('status').innerText = "❌ 同步失败，请检查 CSV 发布状态";
+        document.getElementById('status').firstElementChild.innerText = "❌ 同步失败: 请检查网络或 CSV 链接";
         return {};
     }
 }
@@ -80,11 +115,11 @@ async function getPrices() {
 function xirr(cfs) {
     if(cfs.length < 2) return NaN;
     let r = 0.1;
-    for(let i=0; i<80; i++){
+    for(let i=0; i<100; i++){
         let n=0, d=0;
         cfs.forEach(cf => {
             let t = (cf.d - cfs[0].d) / 31536000000;
-            if (t <= 0) t = 0.000001; 
+            if (t <= 0) t = 0.00001; 
             n += cf.a / Math.pow(1+r, t);
             d -= t * cf.a / Math.pow(1+r, t+1);
         });
@@ -101,9 +136,10 @@ async function render() {
     tbody.innerHTML = "";
     
     let inv = {}, cfs = [];
+    
+    // 处理交易历史
     trades.sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach((t, i) => {
         const amount = t.shares * t.price;
-        // 核心逻辑：买入支出现金(-)，卖出回笼现金(+)
         if (t.type === 'BUY') {
             inv[t.ticker] = (inv[t.ticker] || 0) + t.shares;
             cfs.push({ d: new Date(t.date), a: -amount });
@@ -113,44 +149,43 @@ async function render() {
         }
         
         tbody.innerHTML += `
-            <tr class="hover:bg-slate-50 transition border-b">
-                <td class="py-3 font-mono">${t.date}</td>
+            <tr class="hover:bg-slate-50 transition">
+                <td class="p-4 font-mono">${t.date}</td>
                 <td class="font-bold text-slate-900">${t.ticker}</td>
-                <td><span class="px-2 py-0.5 rounded ${t.type==='BUY'?'bg-emerald-50 text-emerald-600':'bg-red-50 text-red-600'} text-[10px] font-bold">${t.type}</span></td>
+                <td><span class="px-2 py-0.5 rounded-full ${t.type==='BUY'?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'} text-[10px] font-bold">${t.type === 'BUY' ? '买入' : '卖出'}</span></td>
                 <td>${t.shares}</td>
-                <td class="font-mono">￥${t.price.toFixed(2)}</td>
-                <td class="font-mono">￥${amount.toFixed(2)}</td>
-                <td><button onclick="del(${i})" class="text-slate-300 hover:text-red-500">删除</button></td>
+                <td class="font-mono text-slate-400">￥${t.price.toFixed(2)}</td>
+                <td class="font-mono font-bold">￥${amount.toFixed(2)}</td>
+                <td class="text-right p-4"><button onclick="del(${i})" class="text-slate-300 hover:text-red-500 font-bold">删除</button></td>
             </tr>`;
     });
 
-    // 计算当前持仓市值 & 生成所有价格标签
+    // 股价看板：显示 Google Sheet 里的所有股票
     let currentMV = 0, tagsHTML = "";
-    
-    // 显示表格中所有的价格（无论是否持仓）
     for (let ticker in prices) {
         const p = prices[ticker];
-        const isHolding = (inv[ticker] || 0) > 0;
+        const holding = inv[ticker] || 0;
+        const isHolding = holding > 0;
+        
         tagsHTML += `
-            <div class="flex items-center bg-slate-800 rounded px-2 py-1 border ${isHolding ? 'border-blue-500' : 'border-slate-700'}">
-                <span class="text-[10px] font-bold text-slate-400">${ticker}</span>
-                <span class="ml-2 text-xs font-mono font-bold text-white">￥${p.toFixed(2)}</span>
-                ${isHolding ? '<span class="ml-1 text-[8px] text-blue-400">●</span>' : ''}
+            <div class="flex items-center bg-slate-800 rounded-lg px-3 py-1.5 border ${isHolding ? 'border-blue-500 bg-slate-700' : 'border-slate-700'} transition shadow-sm">
+                <span class="text-[10px] font-black text-slate-400 mr-2">${ticker}</span>
+                <span class="text-sm font-mono font-bold text-white">￥${p.toFixed(2)}</span>
+                ${isHolding ? `<span class="ml-2 text-[9px] text-blue-400 bg-blue-900/50 px-1 rounded">${holding}股</span>` : ''}
             </div>`;
         
-        if (isHolding) {
-            currentMV += inv[ticker] * p;
-        }
+        if (isHolding) currentMV += holding * p;
     }
 
+    // 计算 IRR (历史流 + 当前残值)
     const finalCfs = [...cfs, { d: new Date(), a: currentMV }];
     const res = xirr(finalCfs.sort((a,b)=>a.d - b.d));
-    const irrStr = isNaN(res) ? "数据不足" : (res*100).toFixed(2) + "%";
+    const irrStr = isNaN(res) ? "计算中..." : (res*100).toFixed(2) + "%";
     
     document.getElementById("total-val").innerText = "￥" + currentMV.toLocaleString(undefined, {minimumFractionDigits: 2});
     document.getElementById("price-tags").innerHTML = tagsHTML;
     document.getElementById("irr-val").innerText = irrStr;
-    document.getElementById("irr-msg").innerText = res >= 0.17 ? "🎉 已超越 17% 目标回报" : "尚未达到 17% 年化目标";
+    document.getElementById("irr-msg").innerText = res >= 0.17 ? "🎯 目标达成：已超越 17% 年化回报" : "尚未达到 17% 年化目标";
 }
 
 function add() {
@@ -163,13 +198,14 @@ function add() {
     };
     if(t.date && t.ticker && !isNaN(t.shares)) {
         trades.push(t);
-        localStorage.setItem("tr_v100", JSON.stringify(trades));
+        localStorage.setItem("portfolio_v2", JSON.stringify(trades));
         render();
-    } else { alert("请填写完整信息"); }
+    } else { alert("请填写完整交易信息"); }
 }
 
-function del(i) { trades.splice(i, 1); localStorage.setItem("tr_v100", JSON.stringify(trades)); render(); }
+function del(i) { trades.splice(i, 1); localStorage.setItem("portfolio_v2", JSON.stringify(trades)); render(); }
 
+// 初始化日期为今天
 document.getElementById('d').value = new Date().toISOString().split('T')[0];
 render();
 </script>
