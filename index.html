@@ -102,7 +102,7 @@ function xirr(cfs) {
 
 // ✅ 从 Google Sheets 拉价格
 async function fetchPrices() {
-  const url = "YOUR_CSV_LINK"; // ← 替换这里
+  const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBHrRHu4C_g6B_aYFSpgPs7uAYGgE4IRlsTa6auBceGHDxEaFO_9yScwF0yoT4cX117cjXI2QeFOIU/pub?gid=0&single=true&output=csv"; // ← 替换这里
 
   const res = await fetch(url);
   const text = await res.text();
