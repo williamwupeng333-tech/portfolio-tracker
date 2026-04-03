@@ -1,26 +1,103 @@
-// ... 在 updateMetrics 函数内部 ...
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>携程 17% IRR 监控看板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 p-4">
+    <div class="max-w-3xl mx-auto bg-white p-6 rounded-2xl shadow-xl">
+        <h1 class="text-xl font-bold border-b pb-4 mb-4 text-slate-800">📊 实时投资看板</h1>
 
-let currentPortfolioValue = 0;
-let priceListHTML = '<div class="mt-4 grid grid-cols-2 gap-2">'; // 准备存放价格列表
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="p-4 bg-slate-50 rounded-xl border">
+                <p class="text-xs text-slate-400 font-bold uppercase">实时总市值</p>
+                <h2 id="val-box" class="text-2xl font-mono text-blue-600">加载中...</h2>
+                <div id="price-tags" class="mt-2 flex flex-wrap gap-1"></div>
+            </div>
+            <div class="p-4 bg-slate-50 rounded-xl border">
+                <p class="text-xs text-slate-400 font-bold uppercase">年化 IRR (17%目标)</p>
+                <h2 id="irr-box" class="text-2xl font-mono">--%</h2>
+                <p id="irr-status" class="text-[10px] mt-1"></p>
+            </div>
+        </div>
 
-for (let ticker in inventory) {
-    if (inventory[ticker] > 0) {
-        const livePrice = prices[ticker] || 0;
-        const marketValue = inventory[ticker] * livePrice;
-        currentPortfolioValue += marketValue;
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6 bg-slate-50 p-3 rounded-lg text-sm">
+            <input type="date" id="d" class="border p-1 rounded">
+            <input type="text" id="tk" placeholder="代码" class="border p-1 rounded uppercase">
+            <input type="number" id="sh" placeholder="股数" class="border p-1 rounded">
+            <input type="number" id="pr" placeholder="单价" class="border p-1 rounded">
+            <button onclick="add()" class="bg-blue-600 text-white rounded font-bold">添加</button>
+        </div>
+
+        <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 uppercase text-slate-500">
+                <tr><th class="p-2">日期</th><th>代码</th><th>数量</th><th>单价</th><th>操作</th></tr>
+            </thead>
+            <tbody id="list"></tbody>
+        </table>
         
-        // 生成每一行的个股价格显示
-        priceListHTML += `
-            <div class="bg-gray-50 p-2 rounded border border-gray-100 flex justify-between items-center">
-                <span class="text-gray-600 font-bold">${ticker}</span>
-                <span class="text-blue-600 font-mono">￥${livePrice.toFixed(2)}</span>
-            </div>`;
+        <div id="debug-info" class="mt-8 p-2 text-[10px] text-slate-300 border-t">
+            检查状态: 等待同步...
+        </div>
+    </div>
+
+<script>
+let trades = JSON.parse(localStorage.getItem("tr_v6") || "[]");
+const CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBHrRHu4C_g6B_aYFSpgPs7uAYGgE4IRlsTa6auBceGHDxEaFO_9yScwF0yoT4cX117cjXI2QeFOIU/pub?gid=0&single=true&output=csv";
+
+async function fetchPrices() {
+    try {
+        const r = await fetch(CSV + "&t=" + Date.now()); // 加时间戳防缓存
+        const t = await r.text();
+        const rows = t.split(/\r?\n/).slice(1);
+        let p = {};
+        rows.forEach(row => {
+            const c = row.split(",");
+            if(c[0] && c[1]) p[c[0].replace(/"/g,'').trim().toUpperCase()] = parseFloat(c[1]);
+        });
+        document.getElementById('debug-info').innerText = "✅ 成功连上 Google Sheets";
+        return p;
+    } catch(e) {
+        document.getElementById('debug-info').innerText = "❌ 无法获取股价 (CORS错误或断网)";
+        return {};
     }
 }
-priceListHTML += '</div>';
 
-// 最后将这段 HTML 放入你的“当前持仓实时总市值”卡片下面
-document.getElementById("totalValueCard").innerHTML = `
-    <p class="text-gray-500 text-sm">当前持仓实时总市值</p>
-    <h2 class="text-2xl font-bold text-blue-600">￥${currentPortfolioValue.toLocaleString()}</h2>
-    ${priceListHTML} `;
+function xirr(cfs) {
+    if(cfs.length < 2) return 0;
+    let r = 0.1;
+    for(let i=0; i<50; i++){
+        let n=0, d=0;
+        cfs.forEach(cf => {
+            let t = (cf.d - cfs[0].d) / 31536000000;
+            if(t === 0) t = 0.00001; // 防 NaN 补丁
+            n += cf.a / Math.pow(1+r, t);
+            d -= t * cf.a / Math.pow(1+r, t+1);
+        });
+        r -= n/d;
+    }
+    return r;
+}
+
+async function refresh() {
+    const prices = await fetchPrices();
+    const tbody = document.getElementById("list");
+    tbody.innerHTML = "";
+    
+    let inv = {}, cfs = [];
+    trades.sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach((t, i) => {
+        inv[t.ticker] = (inv[t.ticker] || 0) + t.shares;
+        cfs.push({ d: new Date(t.date), a: -(t.shares * t.price) });
+        tbody.innerHTML += `<tr class="border-b">
+            <td class="p-2">${t.date}</td><td class="font-bold">${t.ticker}</td>
+            <td>${t.shares}</td><td>${t.price}</td>
+            <td><button onclick="del(${i})" class="text-red-400">删</button></td></tr>`;
+    });
+
+    let mv = 0, tags = "";
+    for(let k in inv) {
+        if(inv[k] > 0) {
+            const p = prices[k] || 0;
+            mv += inv[k] * p;
+            tags += `<span class="bg-blue-100 text-blue
