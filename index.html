@@ -1,26 +1,26 @@
-async function render() {
-    // ... 前面的代码保持不变 ...
+// ... 在 updateMetrics 函数内部 ...
 
-    const prices = await fetchPrices();
-    
-    // --- 新增：在界面上显示抓取到的价格列表 ---
-    let priceInfoHTML = '<div class="mt-4 p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300"><p class="text-xs text-gray-400 mb-2 uppercase font-bold tracking-widest">Google Sheets 实时报价</p><div class="flex gap-4">';
-    for (let key in prices) {
-        priceInfoHTML += `<div class="flex items-center"><span class="text-sm font-bold text-gray-600">${key}:</span><span class="ml-2 text-sm font-mono text-blue-600">￥${prices[key].toFixed(2)}</span></div>`;
+let currentPortfolioValue = 0;
+let priceListHTML = '<div class="mt-4 grid grid-cols-2 gap-2">'; // 准备存放价格列表
+
+for (let ticker in inventory) {
+    if (inventory[ticker] > 0) {
+        const livePrice = prices[ticker] || 0;
+        const marketValue = inventory[ticker] * livePrice;
+        currentPortfolioValue += marketValue;
+        
+        // 生成每一行的个股价格显示
+        priceListHTML += `
+            <div class="bg-gray-50 p-2 rounded border border-gray-100 flex justify-between items-center">
+                <span class="text-gray-600 font-bold">${ticker}</span>
+                <span class="text-blue-600 font-mono">￥${livePrice.toFixed(2)}</span>
+            </div>`;
     }
-    priceInfoHTML += '</div></div>';
-    
-    // 把这个 HTML 注入到 metrics 区域
-    document.getElementById("metrics").innerHTML = `
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <p class="text-gray-500 text-sm">当前持仓实时总市值</p>
-            <h2 class="text-2xl font-bold text-blue-600">￥${liveMarketValue.toLocaleString()}</h2>
-            ${priceInfoHTML} 
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border ${irrVal >= 0.17 ? 'border-green-200 bg-green-50' : 'border-gray-100'}">
-            <p class="text-gray-500 text-sm">年化 IRR (基于实时价)</p>
-            <h2 id="irrValBox" class="text-4xl font-bold">${isNaN(irrPercent) ? '计算中...' : irrPercent + '%'}</h2>
-            <p class="text-xs text-gray-400 mt-1">目标: 17%</p>
-        </div>
-    `;
 }
+priceListHTML += '</div>';
+
+// 最后将这段 HTML 放入你的“当前持仓实时总市值”卡片下面
+document.getElementById("totalValueCard").innerHTML = `
+    <p class="text-gray-500 text-sm">当前持仓实时总市值</p>
+    <h2 class="text-2xl font-bold text-blue-600">￥${currentPortfolioValue.toLocaleString()}</h2>
+    ${priceListHTML} `;
