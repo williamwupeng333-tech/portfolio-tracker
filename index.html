@@ -2,99 +2,94 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Tracker - IRR 实时看板</title>
+    <title>投资 IRR 实战看板</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js"></script>
-    <style>
-        .irr-good { color: #22c55e; } /* 达到 17% */
-        .irr-bad { color: #ef4444; }
-    </style>
 </head>
-<body class="bg-gray-50 p-4 md:p-8">
+<body class="bg-gray-100 p-6">
     <div class="max-w-4xl mx-auto">
-        <header class="mb-8">
-            <h2 class="text-3xl font-bold text-gray-800">📊 Portfolio Tracker</h2>
-            <p class="text-gray-500 text-sm">数据源: Google Sheets 实时同步</p>
-        </header>
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-6">
+            <h1 class="text-2xl font-bold mb-4">📈 我的投资 IRR 监控 (实时同步)</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <p class="text-sm text-blue-600 font-bold">当前持仓估值 (实时)</p>
+                    <h2 id="totalValueDisplay" class="text-3xl font-mono">￥0.00</h2>
+                </div>
+                <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <p class="text-sm text-green-600 font-bold">年化 IRR (对标 17%)</p>
+                    <h2 id="irrDisplay" class="text-3xl font-mono text-gray-800">0.00%</h2>
+                </div>
+            </div>
 
-        <div class="bg-white p-6 rounded-xl shadow-sm mb-8 border border-gray-100">
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                <input type="date" id="date" class="border p-2 rounded text-sm">
-                <input type="text" id="ticker" placeholder="代码(如TCOM)" class="border p-2 rounded text-sm uppercase">
-                <select id="type" class="border p-2 rounded text-sm">
-                    <option value="BUY">买入 (BUY)</option>
-                    <option value="SELL">卖出 (SELL)</option>
+            <div class="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 rounded border">
+                <input type="date" id="date" class="border p-2 rounded">
+                <input type="text" id="ticker" placeholder="代码(TCOM)" class="border p-2 rounded w-24 uppercase">
+                <select id="type" class="border p-2 rounded">
+                    <option value="BUY">买入 (-)</option>
+                    <option value="SELL">卖出 (+)</option>
                 </select>
-                <input type="number" id="shares" placeholder="股数" class="border p-2 rounded text-sm">
-                <input type="number" id="price" placeholder="买入/卖出单价" class="border p-2 rounded text-sm">
-                <button onclick="addTrade()" class="bg-blue-600 text-white rounded text-sm font-bold hover:bg-blue-700">添加记录</button>
-            </div>
-        </div>
-
-        <div id="metrics" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <input type="number" id="shares" placeholder="股数" class="border p-2 rounded w-20">
+                <input type="number" id="price" placeholder="单价" class="border p-2 rounded w-24">
+                <button onclick="addTrade()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">添加交易</button>
             </div>
 
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
             <table class="w-full text-left text-sm">
-                <thead class="bg-gray-100 border-b">
-                    <tr>
-                        <th class="p-4">日期</th>
-                        <th class="p-4">代码</th>
-                        <th class="p-4">类型</th>
-                        <th class="p-4">股数</th>
-                        <th class="p-4">成交价</th>
-                        <th class="p-4">操作</th>
+                <thead>
+                    <tr class="border-b">
+                        <th class="py-2">日期</th>
+                        <th>代码</th>
+                        <th>动作</th>
+                        <th>金额</th>
+                        <th>股数</th>
+                        <th>操作</th>
                     </tr>
                 </thead>
-                <tbody id="tradeBody"></tbody>
+                <tbody id="tradeList"></tbody>
             </table>
         </div>
     </div>
 
 <script>
-// 初始化数据
-let trades = JSON.parse(localStorage.getItem("trades") || "[]");
+let trades = JSON.parse(localStorage.getItem("my_trades_v4") || "[]");
+// 这是你的 CSV 链接
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBHrRHu4C_g6B_aYFSpgPs7uAYGgE4IRlsTa6auBceGHDxEaFO_9yScwF0yoT4cX117cjXI2QeFOIU/pub?gid=0&single=true&output=csv";
-
-function save() {
-    localStorage.setItem("trades", JSON.stringify(trades));
-    render();
-}
 
 function addTrade() {
     const t = {
-        id: Date.now(), // 增加唯一ID方便删除
+        id: Date.now(),
         date: document.getElementById("date").value,
         ticker: document.getElementById("ticker").value.toUpperCase().trim(),
         type: document.getElementById("type").value,
         shares: parseFloat(document.getElementById("shares").value),
         price: parseFloat(document.getElementById("price").value)
     };
-    if (!t.date || !t.ticker || isNaN(t.shares)) return alert("请填写完整信息");
+    if(!t.date || !t.ticker || isNaN(t.price)) return alert("请检查输入");
     trades.push(t);
-    save();
+    saveAndRender();
 }
 
-// 增加删除功能
 function deleteTrade(id) {
-    if(confirm("确定删除这笔记录吗？")) {
-        trades = trades.filter(t => t.id !== id);
-        save();
-    }
+    trades = trades.filter(t => t.id !== id);
+    saveAndRender();
 }
 
-// 精准 XIRR 算法 (牛顿迭代)
-function xirr(cfs) {
-    if (cfs.length < 2) return 0;
+function saveAndRender() {
+    localStorage.setItem("my_trades_v4", JSON.stringify(trades));
+    render();
+}
+
+// 高精度 XIRR 计算器
+function calculateXIRR(cashflows) {
+    if (cashflows.length < 2) return 0;
     let rate = 0.1;
     for (let i = 0; i < 50; i++) {
         let npv = 0, dnpv = 0;
-        for (let cf of cfs) {
-            let t = (cf.date - cfs[0].date) / (365 * 24 * 3600 * 1000);
+        for (let cf of cashflows) {
+            let t = (cf.date - cashflows[0].date) / (365 * 24 * 3600 * 1000);
             let factor = Math.pow(1 + rate, t);
             npv += cf.amount / factor;
-            dnpv -= (t * cf.amount) / (factor * (1 + rate));
+            dnpv -= t * cf.amount / (factor * (1 + rate));
         }
         let nextRate = rate - npv / dnpv;
         if (Math.abs(nextRate - rate) < 0.0001) return nextRate;
@@ -103,90 +98,65 @@ function xirr(cfs) {
     return rate;
 }
 
-async function fetchPrices() {
-    try {
-        // 使用 cache: 'no-cache' 绕过浏览器缓存，确保获取最新股价
-        const res = await fetch(CSV_URL, { cache: "no-cache" });
-        const text = await res.text();
-        const lines = text.split(/\r?\n/).slice(1);
-        let prices = {};
-        lines.forEach(line => {
-            const parts = line.split(",");
-            if (parts.length >= 2) {
-                const ticker = parts[0].replace(/"/g, '').trim().toUpperCase();
-                const price = parseFloat(parts[1].replace(/"/g, '').trim());
-                if (!isNaN(price)) prices[ticker] = price;
-            }
-        });
-        return prices;
-    } catch (e) {
-        console.error("无法获取股价数据", e);
-        return null;
-    }
-}
-
 async function render() {
-    const tbody = document.getElementById("tradeBody");
-    tbody.innerHTML = "";
-    
-    // 排序交易日期
-    trades.sort((a,b) => new Date(a.date) - new Date(b.date));
-
-    trades.forEach(t => {
-        tbody.innerHTML += `
-            <tr class="border-b hover:bg-gray-50">
-                <td class="p-4 text-gray-600">${t.date}</td>
-                <td class="p-4 font-bold text-gray-800">${t.ticker}</td>
-                <td class="p-4"><span class="px-2 py-1 rounded text-xs ${t.type === 'BUY' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}">${t.type}</span></td>
-                <td class="p-4">${t.shares}</td>
-                <td class="p-4">￥${t.price.toFixed(2)}</td>
-                <td class="p-4"><button onclick="deleteTrade(${t.id})" class="text-red-400 hover:text-red-600">删除</button></td>
-            </tr>`;
+    const list = document.getElementById("tradeList");
+    list.innerHTML = "";
+    trades.sort((a,b) => new Date(a.date) - new Date(b.date)).forEach(t => {
+        list.innerHTML += `<tr class="border-b text-gray-700">
+            <td class="py-2">${t.date}</td>
+            <td class="font-bold">${t.ticker}</td>
+            <td class="${t.type === 'BUY' ? 'text-red-500' : 'text-green-500'}">${t.type === 'BUY' ? '买入' : '卖出'}</td>
+            <td>${(t.shares * t.price).toLocaleString()}</td>
+            <td>${t.shares}</td>
+            <td><button onclick="deleteTrade(${t.id})" class="text-gray-400 hover:text-red-500">删除</button></td>
+        </tr>`;
     });
 
-    // 计算指标
-    const prices = await fetchPrices();
-    if (!prices) {
-        document.getElementById("metrics").innerHTML = `<div class="col-span-2 text-red-500 bg-red-50 p-4 rounded">⚠️ 无法同步股价，请检查 GitHub Pages 是否通过 HTTPS 访问</div>`;
-        return;
-    }
+    // 1. 获取实时价格
+    let livePrices = {};
+    try {
+        const res = await fetch(CSV_URL);
+        const csv = await res.text();
+        const rows = csv.split(/\r?\n/).slice(1);
+        rows.forEach(row => {
+            const cols = row.split(",");
+            if(cols[0] && cols[1]) {
+                livePrices[cols[0].replace(/"/g,'').trim().toUpperCase()] = parseFloat(cols[1].replace(/"/g,'').trim());
+            }
+        });
+    } catch (e) { console.error("无法获取实时价格，请通过 GitHub Pages 访问"); }
 
+    // 2. 统计持仓和历史现金流
     let inventory = {};
-    let cfs = trades.map(t => ({
+    let historyCfs = trades.map(t => ({
         date: new Date(t.date),
-        amount: t.type === "BUY" ? -(t.shares * t.price) : (t.shares * t.price)
+        amount: t.type === 'BUY' ? -(t.shares * t.price) : (t.shares * t.price)
     }));
 
     trades.forEach(t => {
-        inventory[t.ticker] = (inventory[t.ticker] || 0) + (t.type === "BUY" ? t.shares : -t.shares);
+        inventory[t.ticker] = (inventory[t.ticker] || 0) + (t.type === 'BUY' ? t.shares : -t.shares);
     });
 
-    let liveMarketValue = 0;
+    // 3. 计算“未卖出”部分的当前价值
+    let currentPortfolioValue = 0;
     for (let ticker in inventory) {
-        if (inventory[ticker] > 0 && prices[ticker]) {
-            liveMarketValue += inventory[ticker] * prices[ticker];
+        if (inventory[ticker] > 0) {
+            const price = livePrices[ticker] || 0;
+            currentPortfolioValue += inventory[ticker] * price;
         }
     }
 
-    // 将虚拟平仓价值加入现金流计算 IRR
-    const finalCfs = [...cfs, { date: new Date(), amount: liveMarketValue }];
-    const irrVal = xirr(finalCfs.sort((a,b) => a.date - b.date));
-    const irrPercent = (irrVal * 100).toFixed(2);
+    // 4. 将当前价值作为“今天的虚拟卖出”加入现金流
+    const finalCfs = [...historyCfs, { date: new Date(), amount: currentPortfolioValue }];
+    const irr = calculateXIRR(finalCfs.sort((a,b) => a.date - b.date));
 
-    document.getElementById("metrics").innerHTML = `
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <p class="text-gray-500 text-sm">当前持仓实时总市值</p>
-            <h2 class="text-2xl font-bold text-blue-600">￥${liveMarketValue.toLocaleString(undefined, {minimumFractionDigits: 2})}</h2>
-        </div>
-        <div class="bg-white p-6 rounded-xl shadow-sm border ${irrVal >= 0.17 ? 'border-green-200 bg-green-50' : 'border-gray-100'}">
-            <p class="text-gray-500 text-sm">年化 IRR (基于实时价)</p>
-            <h2 class="text-4xl font-bold ${irrVal >= 0.17 ? 'text-green-600' : 'text-gray-800'}">${irrPercent}%</h2>
-            ${irrVal >= 0.17 ? '<p class="text-xs text-green-600 font-bold mt-1">🎉 达到 17% 预设回报目标</p>' : '<p class="text-xs text-gray-400 mt-1">距离 17% 目标还需等待时间或股价上涨</p>'}
-        </div>
-    `;
+    // 5. 显示
+    document.getElementById("totalValueDisplay").innerText = "￥" + currentPortfolioValue.toLocaleString(undefined, {minimumFractionDigits:2});
+    const irrEl = document.getElementById("irrDisplay");
+    irrEl.innerText = (irr * 100).toFixed(2) + "%";
+    irrEl.className = `text-3xl font-mono ${irr >= 0.17 ? 'text-green-600' : 'text-red-500'}`;
 }
 
-// 设置默认日期为今天
 document.getElementById('date').value = new Date().toISOString().split('T')[0];
 render();
 </script>
