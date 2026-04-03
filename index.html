@@ -2,97 +2,91 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Portfolio Tracker Live</title>
+    <title>Global Portfolio Tracker V3</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-50 p-4 md:p-10 text-slate-800">
-    <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-2xl border border-slate-100">
-        <h1 class="text-2xl font-black mb-6 tracking-tight text-slate-900 border-b pb-4 flex items-center">
-            <span class="mr-2">📊</span> 投资看板 <span class="ml-2 text-blue-500 text-sm font-bold bg-blue-50 px-2 py-1 rounded">V2.0 LIVE</span>
+    <div class="max-w-5xl mx-auto bg-white p-8 rounded-3xl shadow-2xl border border-slate-100">
+        <h1 class="text-2xl font-black mb-6 tracking-tight text-slate-900 border-b pb-4 flex justify-between items-center">
+            <span>🌍 全球资产看板 <span class="text-blue-600 text-sm ml-2">USD Based</span></span>
+            <span id="sync-indicator" class="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full uppercase">Syncing...</span>
         </h1>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="p-6 bg-slate-900 rounded-2xl text-white shadow-lg">
-                <p class="text-xs font-bold opacity-50 uppercase mb-1 tracking-widest">当前持仓实时总市值</p>
-                <h2 id="total-val" class="text-4xl font-mono font-bold tracking-tighter mb-4">￥0.00</h2>
-                
-                <div class="pt-4 border-t border-slate-700">
-                    <p class="text-[10px] font-bold text-slate-500 mb-3 uppercase tracking-widest flex items-center">
-                        <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></span>
-                        Google Sheets 实时报价看板
-                    </p>
-                    <div id="price-tags" class="flex flex-wrap gap-2"></div>
-                </div>
+                <p class="text-xs font-bold opacity-50 uppercase mb-1">总价值 (USD)</p>
+                <h2 id="total-val-usd" class="text-3xl font-mono font-bold tracking-tighter">$--</h2>
+                <div id="price-tags" class="mt-4 flex flex-wrap gap-2 text-[10px]"></div>
             </div>
-
-            <div class="p-6 bg-blue-600 rounded-2xl text-white shadow-lg relative overflow-hidden">
-                <p class="text-xs font-bold opacity-70 uppercase mb-1 tracking-widest">年化 IRR (基于实时价)</p>
-                <h2 id="irr-val" class="text-4xl font-mono font-bold tracking-tighter relative z-10">--%</h2>
-                <p id="irr-msg" class="text-[10px] mt-2 font-medium opacity-80 relative z-10"></p>
-                <div class="absolute right-[-20px] bottom-[-20px] text-white opacity-10 text-8-xl font-black italic select-none">17%</div>
+            <div class="p-6 bg-blue-600 rounded-2xl text-white shadow-lg">
+                <p class="text-xs font-bold opacity-70 uppercase mb-1">年化 IRR</p>
+                <h2 id="irr-val" class="text-3xl font-mono font-bold tracking-tighter">--%</h2>
+                <p class="text-[10px] mt-2 opacity-80 italic">目标: 17.00%</p>
+            </div>
+            <div class="p-6 bg-white border rounded-2xl shadow-sm">
+                <p class="text-xs font-bold text-slate-400 uppercase mb-1">实时汇率 (vs USD)</p>
+                <div class="text-xs font-mono space-y-1">
+                    <p>HKD/USD: <span id="rate-hkd">--</span></p>
+                    <p>SGD/USD: <span id="rate-sgd">--</span></p>
+                </div>
             </div>
         </div>
 
-        <div class="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200 shadow-inner">
-            <div class="grid grid-cols-2 md:grid-cols-6 gap-4 items-end">
+        <div class="mb-8 p-4 bg-slate-50 rounded-2xl border">
+            <canvas id="equityChart" height="100"></canvas>
+        </div>
+
+        <div class="bg-slate-50 p-6 rounded-2xl mb-8 border border-slate-200">
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-3 items-end">
                 <div class="col-span-2 md:col-span-1">
                     <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">日期</label>
-                    <input type="date" id="d" class="w-full border-slate-200 border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="date" id="d" class="w-full border p-2 rounded-lg text-sm outline-none">
                 </div>
-                <div class="col-span-2 md:col-span-1">
+                <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">代码</label>
-                    <input type="text" id="tk" placeholder="TCOM" class="w-full border-slate-200 border p-2 rounded-lg text-sm uppercase font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="text" id="tk" placeholder="TCOM" class="w-full border p-2 rounded-lg text-sm uppercase font-bold outline-none">
                 </div>
-                <div class="col-span-2 md:col-span-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">交易类型</label>
-                    <select id="type" class="w-full border-slate-200 border p-2 rounded-lg text-sm font-bold bg-white focus:ring-2 focus:ring-blue-500 outline-none">
-                        <option value="BUY">买入 (+)</option>
-                        <option value="SELL" class="text-red-500">卖出 (-)</option>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">货币</label>
+                    <select id="curr" class="w-full border p-2 rounded-lg text-sm font-bold bg-white outline-none">
+                        <option value="USD">USD</option>
+                        <option value="HKD">HKD</option>
+                        <option value="SGD">SGD</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">类型</label>
+                    <select id="type" class="w-full border p-2 rounded-lg text-sm font-bold bg-white outline-none">
+                        <option value="BUY">买入</option>
+                        <option value="SELL" class="text-red-500">卖出</option>
                     </select>
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">股数</label>
-                    <input type="number" id="sh" placeholder="100" class="w-full border-slate-200 border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="number" id="sh" placeholder="100" class="w-full border p-2 rounded-lg text-sm outline-none">
                 </div>
                 <div>
                     <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">单价</label>
-                    <input type="number" id="pr" placeholder="50.0" class="w-full border-slate-200 border p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <input type="number" id="pr" placeholder="50.0" class="w-full border p-2 rounded-lg text-sm outline-none">
                 </div>
-                <button onclick="add()" class="bg-slate-900 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-600 transition shadow-lg h-[40px] w-full col-span-2 md:col-span-1">
-                    添加记录
-                </button>
+                <button onclick="add()" class="bg-slate-900 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-600 transition h-[38px] w-full">添加</button>
             </div>
         </div>
 
-        <div class="overflow-hidden rounded-xl border border-slate-100 shadow-sm">
-            <table class="w-full text-left text-xs">
-                <thead class="bg-slate-50 text-slate-400 uppercase font-bold border-b">
-                    <tr>
-                        <th class="p-4">日期</th>
-                        <th>代码</th>
-                        <th>动作</th>
-                        <th>数量</th>
-                        <th>价格</th>
-                        <th>总额</th>
-                        <th class="text-right p-4">操作</th>
-                    </tr>
-                </thead>
-                <tbody id="list" class="divide-y text-slate-600 bg-white">
-                    </tbody>
-            </table>
-        </div>
-
-        <div id="status" class="mt-8 p-3 bg-slate-50 rounded-lg text-[10px] font-mono text-slate-400 flex justify-between items-center">
-            <span>系统状态：等待数据同步...</span>
-            <span class="opacity-50">Data Source: Google Sheets CSV</span>
-        </div>
+        <div class="overflow-x-auto"><table class="w-full text-left text-xs"><thead class="bg-slate-50 border-b text-slate-400 uppercase font-bold"><tr class="p-4"><th>日期</th><th>代码</th><th>货币</th><th>类型</th><th>数量</th><th>原始单价</th><th>USD金额</th><th>操作</th></tr></thead><tbody id="list" class="divide-y bg-white"></tbody></table></div>
     </div>
 
 <script>
-// 使用全新的 Key 确保存储结构不冲突
-let trades = JSON.parse(localStorage.getItem("portfolio_v2") || "[]");
+// 使用 V3 存储 Key
+let trades = JSON.parse(localStorage.getItem("portfolio_v3") || "[]");
+let chartInstance = null;
 
+// 你之前的 Google Sheet CSV 链接
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSBHrRHu4C_g6B_aYFSpgPs7uAYGgE4IRlsTa6auBceGHDxEaFO_9yScwF0yoT4cX117cjXI2QeFOIU/pub?gid=0&single=true&output=csv";
+
+// 汇率锚点 (建议在 Google Sheet 中维护，这里提供默认值)
+const RATES = { USD: 1, HKD: 0.128, SGD: 0.74 }; 
 
 async function getPrices() {
     try {
@@ -104,10 +98,10 @@ async function getPrices() {
             const c = row.split(",");
             if(c[0] && c[1]) p[c[0].replace(/"/g,'').trim().toUpperCase()] = parseFloat(c[1]);
         });
-        document.getElementById('status').firstElementChild.innerText = "✅ 股价同步成功: " + Object.keys(p).join(", ");
+        document.getElementById('sync-indicator').innerText = "● LIVE SYNCED";
         return p;
     } catch(e) {
-        document.getElementById('status').firstElementChild.innerText = "❌ 同步失败: 请检查网络或 CSV 链接";
+        document.getElementById('sync-indicator').innerText = "● OFFLINE MODE";
         return {};
     }
 }
@@ -135,79 +129,101 @@ async function render() {
     const tbody = document.getElementById("list");
     tbody.innerHTML = "";
     
-    let inv = {}, cfs = [];
+    // 显示汇率
+    document.getElementById('rate-hkd').innerText = RATES.HKD;
+    document.getElementById('rate-sgd').innerText = RATES.SGD;
+
+    let inv = {}, cfsUSD = [], dailyBalance = [];
     
-    // 处理交易历史
     trades.sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach((t, i) => {
-        const amount = t.shares * t.price;
+        const rate = RATES[t.currency || 'USD'];
+        const amtUSD = t.shares * t.price * rate;
+        
         if (t.type === 'BUY') {
             inv[t.ticker] = (inv[t.ticker] || 0) + t.shares;
-            cfs.push({ d: new Date(t.date), a: -amount });
+            cfsUSD.push({ d: new Date(t.date), a: -amtUSD });
         } else {
             inv[t.ticker] = (inv[t.ticker] || 0) - t.shares;
-            cfs.push({ d: new Date(t.date), a: amount });
+            cfsUSD.push({ d: new Date(t.date), a: amtUSD });
         }
         
-        tbody.innerHTML += `
-            <tr class="hover:bg-slate-50 transition">
-                <td class="p-4 font-mono">${t.date}</td>
-                <td class="font-bold text-slate-900">${t.ticker}</td>
-                <td><span class="px-2 py-0.5 rounded-full ${t.type==='BUY'?'bg-emerald-100 text-emerald-700':'bg-red-100 text-red-700'} text-[10px] font-bold">${t.type === 'BUY' ? '买入' : '卖出'}</span></td>
-                <td>${t.shares}</td>
-                <td class="font-mono text-slate-400">￥${t.price.toFixed(2)}</td>
-                <td class="font-mono font-bold">￥${amount.toFixed(2)}</td>
-                <td class="text-right p-4"><button onclick="del(${i})" class="text-slate-300 hover:text-red-500 font-bold">删除</button></td>
-            </tr>`;
+        tbody.innerHTML += `<tr class="hover:bg-slate-50 border-b"><td class="p-3 font-mono">${t.date}</td><td class="font-bold">${t.ticker}</td><td>${t.currency}</td><td>${t.type}</td><td>${t.shares}</td><td>${t.price}</td><td class="font-mono text-blue-600">$${amtUSD.toFixed(2)}</td><td><button onclick="del(${i})" class="text-red-300 hover:text-red-600">DEL</button></td></tr>`;
     });
 
-    // 股价看板：显示 Google Sheet 里的所有股票
-    let currentMV = 0, tagsHTML = "";
-    for (let ticker in prices) {
-        const p = prices[ticker];
-        const holding = inv[ticker] || 0;
-        const isHolding = holding > 0;
-        
-        tagsHTML += `
-            <div class="flex items-center bg-slate-800 rounded-lg px-3 py-1.5 border ${isHolding ? 'border-blue-500 bg-slate-700' : 'border-slate-700'} transition shadow-sm">
-                <span class="text-[10px] font-black text-slate-400 mr-2">${ticker}</span>
-                <span class="text-sm font-mono font-bold text-white">￥${p.toFixed(2)}</span>
-                ${isHolding ? `<span class="ml-2 text-[9px] text-blue-400 bg-blue-900/50 px-1 rounded">${holding}股</span>` : ''}
-            </div>`;
-        
-        if (isHolding) currentMV += holding * p;
+    let currentMV_USD = 0, tagsHTML = "";
+    for (let k in prices) {
+        const p = prices[k];
+        const holding = inv[k] || 0;
+        if (holding > 0) {
+            // 注意：这里假设 Google Sheet 里的价格已经对应了它本来的货币，或是你需要在此处处理 Ticker 对应的货币
+            // 为简化，假设 TCOM 是 USD，9961.HK 是 HKD
+            const tickerRate = k.includes(".HK") ? RATES.HKD : (k.includes(".SI") ? RATES.SGD : RATES.USD);
+            currentMV_USD += holding * p * tickerRate;
+            tagsHTML += `<div class="bg-slate-800 px-2 py-1 rounded border border-slate-700">${k}: $${(p * tickerRate).toFixed(2)}</div>`;
+        }
     }
 
-    // 计算 IRR (历史流 + 当前残值)
-    const finalCfs = [...cfs, { d: new Date(), a: currentMV }];
+    // IRR 计算
+    const finalCfs = [...cfsUSD, { d: new Date(), a: currentMV_USD }];
     const res = xirr(finalCfs.sort((a,b)=>a.d - b.d));
-    const irrStr = isNaN(res) ? "计算中..." : (res*100).toFixed(2) + "%";
     
-    document.getElementById("total-val").innerText = "￥" + currentMV.toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById("total-val-usd").innerText = "$" + currentMV_USD.toLocaleString(undefined, {minimumFractionDigits:2});
     document.getElementById("price-tags").innerHTML = tagsHTML;
-    document.getElementById("irr-val").innerText = irrStr;
-    document.getElementById("irr-msg").innerText = res >= 0.17 ? "🎯 目标达成：已超越 17% 年化回报" : "尚未达到 17% 年化目标";
+    document.getElementById("irr-val").innerText = isNaN(res) ? "--%" : (res*100).toFixed(2) + "%";
+    
+    updateChart(cfsUSD, currentMV_USD);
+}
+
+function updateChart(cfs, currentMV) {
+    const ctx = document.getElementById('equityChart').getContext('2d');
+    let runningSum = 0;
+    const dataPoints = cfs.map(cf => {
+        runningSum += Math.abs(cf.a); // 粗略展示投入本金+价值的变化
+        return { x: cf.d, y: runningSum };
+    });
+    dataPoints.push({ x: new Date(), y: currentMV });
+
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Portfolio Value (USD)',
+                data: dataPoints,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            scales: { x: { type: 'time', time: { unit: 'month' } }, y: { beginAtZero: true } },
+            plugins: { legend: { display: false } }
+        }
+    });
 }
 
 function add() {
     const t = {
         date: document.getElementById("d").value,
         ticker: document.getElementById("tk").value.toUpperCase().trim(),
+        currency: document.getElementById("curr").value,
         type: document.getElementById("type").value,
         shares: parseFloat(document.getElementById("sh").value),
         price: parseFloat(document.getElementById("pr").value)
     };
-    if(t.date && t.ticker && !isNaN(t.shares)) {
+    if(t.date && t.ticker) {
         trades.push(t);
-        localStorage.setItem("portfolio_v2", JSON.stringify(trades));
+        localStorage.setItem("portfolio_v3", JSON.stringify(trades));
         render();
-    } else { alert("请填写完整交易信息"); }
+    }
 }
 
-function del(i) { trades.splice(i, 1); localStorage.setItem("portfolio_v2", JSON.stringify(trades)); render(); }
+function del(i) { trades.splice(i, 1); localStorage.setItem("portfolio_v3", JSON.stringify(trades)); render(); }
 
-// 初始化日期为今天
 document.getElementById('d').value = new Date().toISOString().split('T')[0];
 render();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 </body>
 </html>
